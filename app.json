@@ -7,16 +7,16 @@
     "API_ID": {
       "description": "TG API_ID",
       "value": "",
-      "required": false
+      "required": true
     },
     "API_HASH": {
       "description": "TG API HASH",
       "value": "",
-      "required": false
+      "required": true
     },
     "BOT_TOKEN": {
       "description": "Get your bot token by talking to @Botfather",
-      "required": false
+      "required": true
     },
     "APP_NAME": {
       "description": "Heroku app name",
@@ -29,7 +29,7 @@
     "OWNER_ID": {
       "description": "who will use this bot",
       "value": "",
-      "required": false
+      "required": true
     },
     "FR_TOKEN": {
       "description": "FR_TOKEN",
@@ -39,12 +39,12 @@
     "credits": {
       "description": "Give credit",
       "value": "",
-      "required": false
+      "required": true
     },
     "GROUP_IDS": {
       "value": "",
       "description": "Group Ids seperated by space",
-      "required": false
+      "required": true
     }
   },
   "formation": {
