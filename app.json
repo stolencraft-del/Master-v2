@@ -20,7 +20,7 @@
     },
     "APP_NAME": {
       "description": "Heroku app name",
-      "required": false
+      "required": true
     },
     "API_KEY": {
       "description": "Heroku api key",
