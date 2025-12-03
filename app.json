@@ -5,46 +5,54 @@
   "addons": [],
   "env": {
     "API_ID": {
-      "description": "TG API_ID",
+      "description": "Get this from https://my.telegram.org/apps",
       "value": "",
       "required": true
     },
     "API_HASH": {
-      "description": "TG API HASH",
+      "description": "Get this from https://my.telegram.org/apps",
       "value": "",
       "required": true
     },
     "BOT_TOKEN": {
-      "description": "Get your bot token by talking to @Botfather",
+      "description": "Get your bot token by talking to @BotFather on Telegram",
+      "value": "",
       "required": true
     },
     "APP_NAME": {
-      "description": "Heroku app name",
-      "required": true
+      "description": "Your Heroku app name (same as the app URL)",
+      "value": "",
+      "required": false
     },
     "API_KEY": {
-      "description": "Heroku api key",
+      "description": "Heroku API key (usually not needed)",
+      "value": "",
       "required": false
     },
     "OWNER_ID": {
-      "description": "who will use this bot",
+      "description": "Your Telegram User ID - Get from @userinfobot",
       "value": "",
       "required": true
     },
     "FR_TOKEN": {
-      "description": "FR_TOKEN",
+      "description": "FR_TOKEN for file operations",
       "value": "f4f0e3047723385244d3aae0068d60ec09f79345",
       "required": true
     },
     "credits": {
-      "description": "Give credit",
-      "value": "",
-      "required": true
+      "description": "Give credit to creator",
+      "value": "Made by @NtrRazYt",
+      "required": false
     },
     "GROUP_IDS": {
+      "description": "Authorized Group IDs separated by space (e.g., -1001234567890 -1009876543210)",
       "value": "",
-      "description": "Group Ids seperated by space",
-      "required": true
+      "required": false
+    },
+    "VIP_USERS": {
+      "description": "VIP User IDs separated by space (e.g., 123456789 987654321)",
+      "value": "",
+      "required": false
     }
   },
   "formation": {
@@ -63,5 +71,6 @@
     {
       "url": "https://github.com/amivin/aria2-heroku.git"
     }
-  ]
+  ],
+  "stack": "heroku-22"
 }
