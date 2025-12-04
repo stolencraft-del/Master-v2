@@ -245,8 +245,8 @@ async def account_login(bot: Client, m: Message):
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'    
             try:
-                cc = f'🎬 **Video Name:** {name1}\n📦 **Batch Name:** {b_name}\n👤 **Downloaded By:** {MR}'
-                cc1 = f'📕 **PDF Name:** {name1}\n📦 **Batch Name:** {b_name}\n👤 **Downloaded By:** {MR}'                   
+                cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'
+                cc1 = f'📕 **PDF Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'                   
 
                 if "drive" in url or ".pdf" in url or "pdfs" in url:
                     try:
@@ -277,7 +277,7 @@ async def account_login(bot: Client, m: Message):
                             await split_prog.delete(True)
                             
                             for idx, split_file in enumerate(split_files, 1):
-                                part_cc = f'🎬 **Video Name:** {name1}\n📦 **Batch Name:** {b_name}\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
+                                part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
                                 await helper.send_vid(bot, m, part_cc, split_file, thumb, os.path.basename(split_file), prog, url, channel_id)
                                 os.remove(split_file)
                         else:
