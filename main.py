@@ -33,19 +33,31 @@ async def split_large_video(video_path, max_size_mb=1900):
     Split file into chunks of max_size_mb (default 1.9 GB for safe 2GB upload)
     Returns list of split file paths
     """
-    max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
-    file_size = os.path.getsize(video_path)
-    
-    if file_size <= max_size_bytes:
-        return [video_path]  # No split needed
-    
-    parts_list = []
-    base_name = os.path.splitext(video_path)[0]
-    extension = os.path.splitext(video_path)[1]
-    
     try:
-        # Using ffmpeg to split video files
-        segment_time = int((max_size_bytes / file_size) * get_video_duration(video_path))
+        max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
+        
+        if not os.path.exists(video_path):
+            logging.error(f"File not found: {video_path}")
+            return [video_path]
+            
+        file_size = os.path.getsize(video_path)
+        
+        if file_size <= max_size_bytes:
+            logging.info(f"File size {file_size / (1024*1024):.2f} MB - No split needed")
+            return [video_path]  # No split needed
+        
+        parts_list = []
+        base_name = os.path.splitext(video_path)[0]
+        extension = os.path.splitext(video_path)[1]
+        
+        # Get video duration
+        duration = get_video_duration(video_path)
+        logging.info(f"Video duration: {duration} seconds")
+        
+        # Calculate segment time to keep parts under max_size_mb
+        segment_time = int((max_size_bytes / file_size) * duration * 0.95)  # 95% safety margin
+        
+        logging.info(f"Splitting {video_path} into segments of {segment_time} seconds")
         
         # Split using ffmpeg
         cmd = [
@@ -58,19 +70,30 @@ async def split_large_video(video_path, max_size_mb=1900):
             f'{base_name}_part%03d{extension}'
         ]
         
-        subprocess.run(cmd, check=True, capture_output=True)
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            logging.error(f"FFmpeg error: {result.stderr}")
+            return [video_path]
         
         # Collect split files
         part_number = 1
         while True:
             part_path = f'{base_name}_part{str(part_number).zfill(3)}{extension}'
             if os.path.exists(part_path):
+                part_size = os.path.getsize(part_path) / (1024 * 1024)
+                logging.info(f"Created part {part_number}: {part_path} ({part_size:.2f} MB)")
                 parts_list.append(part_path)
                 part_number += 1
             else:
                 break
         
-        return parts_list if parts_list else [video_path]
+        if not parts_list:
+            logging.error("No parts created, returning original file")
+            return [video_path]
+            
+        logging.info(f"Successfully split into {len(parts_list)} parts")
+        return parts_list
     
     except Exception as e:
         logging.error(f"Error splitting file: {e}")
@@ -274,19 +297,28 @@ async def account_login(bot: Client, m: Message):
                     if os.path.exists(video_file):
                         try:
                             file_size_mb = os.path.getsize(video_file) / (1024 * 1024)
+                            logging.info(f"Video file size: {file_size_mb:.2f} MB")
+                            
                             if file_size_mb > 1900:
-                                split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
+                                split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file into parts...**")
                                 video_parts = await split_large_video(video_file)
                                 await split_prog.delete(True)
                                 
                                 if video_parts and len(video_parts) > 1:
+                                    logging.info(f"Split successful: {len(video_parts)} parts")
                                     for part_idx, part_path in enumerate(video_parts, 1):
+                                        part_size = os.path.getsize(part_path) / (1024 * 1024)
+                                        logging.info(f"Uploading part {part_idx}: {part_size:.2f} MB")
                                         part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
                                         await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
                                         if os.path.exists(part_path):
                                             os.remove(part_path)
+                                    # Remove original file after successful split upload
+                                    if os.path.exists(video_file):
+                                        os.remove(video_file)
                                 else:
-                                    # If split failed, send original file
+                                    logging.warning("Split failed or returned single file, trying to send original")
+                                    # If split failed, try to send original file
                                     await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
                             else:
                                 await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
@@ -302,38 +334,73 @@ async def account_login(bot: Client, m: Message):
                     mpd = None
                     Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
                     prog = await bot.send_message(channel_id, Show)
+                    
+                    # Download the video
                     res_file = await helper.download_video(url, cmd, name)
                     filename = res_file
+                    
                     await prog.delete(True)
                     
-                    # Check file size and split if needed
-                    if filename and os.path.exists(filename):
-                        try:
-                            file_size_mb = os.path.getsize(filename) / (1024 * 1024)
-                            if file_size_mb > 1900:
-                                split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
-                                video_parts = await split_large_video(filename)
-                                await split_prog.delete(True)
-                                
-                                if video_parts and len(video_parts) > 1:
-                                    for part_idx, part_path in enumerate(video_parts, 1):
-                                        part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
-                                        await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
-                                        if os.path.exists(part_path):
-                                            os.remove(part_path)
-                                    
-                                    if os.path.exists(filename):
-                                        os.remove(filename)
-                                else:
-                                    # If split failed, send original file
-                                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
-                            else:
-                                await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
-                        except Exception as e:
-                            logging.error(f"Error processing file: {e}")
-                            await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
-                    else:
+                    # CRITICAL: Check file size IMMEDIATELY after download
+                    if not filename or not os.path.exists(filename):
                         raise Exception("Download failed - file not found")
+                    
+                    file_size_mb = os.path.getsize(filename) / (1024 * 1024)
+                    logging.info(f"[SPLIT CHECK] Downloaded file: {filename}, Size: {file_size_mb:.2f} MB")
+                    
+                    # If file is larger than 1900 MB, MUST split before any upload
+                    if file_size_mb > 1900:
+                        logging.info(f"[SPLIT CHECK] File exceeds 1900 MB - initiating split")
+                        split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file into parts...**")
+                        
+                        try:
+                            video_parts = await split_large_video(filename)
+                            await split_prog.delete(True)
+                            
+                            if not video_parts or len(video_parts) < 2:
+                                logging.error(f"[SPLIT CHECK] Split failed - only got {len(video_parts) if video_parts else 0} parts")
+                                raise Exception(f"File is {file_size_mb:.2f} MB but split failed. FFmpeg may not be working properly.")
+                            
+                            logging.info(f"[SPLIT CHECK] Successfully split into {len(video_parts)} parts")
+                            
+                            # Upload each part
+                            for part_idx, part_path in enumerate(video_parts, 1):
+                                if not os.path.exists(part_path):
+                                    logging.error(f"[SPLIT CHECK] Part {part_idx} not found: {part_path}")
+                                    continue
+                                    
+                                part_size = os.path.getsize(part_path) / (1024 * 1024)
+                                logging.info(f"[SPLIT CHECK] Uploading part {part_idx}/{len(video_parts)}: {part_path} ({part_size:.2f} MB)")
+                                
+                                part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                
+                                await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
+                                
+                                # Clean up part file
+                                try:
+                                    os.remove(part_path)
+                                    logging.info(f"[SPLIT CHECK] Removed part {part_idx}")
+                                except Exception as e:
+                                    logging.error(f"[SPLIT CHECK] Failed to remove part: {e}")
+                            
+                            # Clean up original file
+                            try:
+                                if os.path.exists(filename):
+                                    os.remove(filename)
+                                    logging.info(f"[SPLIT CHECK] Removed original file")
+                            except Exception as e:
+                                logging.error(f"[SPLIT CHECK] Failed to remove original: {e}")
+                                
+                        except Exception as e:
+                            logging.error(f"[SPLIT CHECK] Split/upload error: {e}")
+                            # Clean up on error
+                            if os.path.exists(filename):
+                                os.remove(filename)
+                            raise Exception(f"File is too large ({file_size_mb:.2f} MB) and split failed: {e}")
+                    else:
+                        # File is under 1900 MB - upload normally
+                        logging.info(f"[SPLIT CHECK] File under 1900 MB - uploading normally")
+                        await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
                     
                     count += 1
                     time.sleep(1)
