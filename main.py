@@ -265,7 +265,7 @@ async def account_login(bot: Client, m: Message):
                         continue
 
                 elif mpd and keys:
-                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}\n🎥**Url -** `{url}`\n🎥Video Quality - {raw_text2}\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
+                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Url -** `{url}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
                     prog = await bot.send_message(channel_id, Show)
                     await helper.download_and_dec_video(mpd, keys, path, name, raw_text2)
                     await prog.delete(True)
@@ -273,23 +273,29 @@ async def account_login(bot: Client, m: Message):
                     # Check file size and split if needed
                     video_file = f"{path}/{name}.mp4"
                     if os.path.exists(video_file):
-                        file_size_mb = os.path.getsize(video_file) / (1024 * 1024)
-                        if file_size_mb > 1900:
-                            split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
-                            split_files = await split_file(video_file)
-                            await split_prog.delete(True)
-                            
-                            if split_files and len(split_files) > 1:
-                                for idx, split_f in enumerate(split_files, 1):
-                                    part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
-                                    await helper.send_vid(bot, m, part_cc, split_f, thumb, os.path.basename(split_f), prog, url, channel_id)
-                                    if os.path.exists(split_f):
-                                        os.remove(split_f)
+                        try:
+                            file_size_mb = os.path.getsize(video_file) / (1024 * 1024)
+                            if file_size_mb > 1900:
+                                split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
+                                split_files = await split_file(video_file)
+                                await split_prog.delete(True)
+                                
+                                if split_files and len(split_files) > 1:
+                                    for idx, split_f in enumerate(split_files, 1):
+                                        part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
+                                        await helper.send_vid(bot, m, part_cc, split_f, thumb, os.path.basename(split_f), prog, url, channel_id)
+                                        if os.path.exists(split_f):
+                                            os.remove(split_f)
+                                else:
+                                    # If split failed, send original file
+                                    await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
                             else:
-                                # If split failed, send original file
                                 await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
-                        else:
+                        except Exception as e:
+                            logging.error(f"Error processing file: {e}")
                             await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
+                    else:
+                        raise Exception("Download failed - file not found")
                     
                     count += 1
                     time.sleep(3)
