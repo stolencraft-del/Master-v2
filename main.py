@@ -27,30 +27,29 @@ logging.basicConfig(
 )
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
-# Split file function
-async def split_video_file(file_path, max_size=1900):
+# Split video file function
+async def split_large_video(video_path, max_size_mb=1900):
     """
-    Split file into chunks of max_size MB (default 1.9 GB for safe 2GB upload)
+    Split file into chunks of max_size_mb (default 1.9 GB for safe 2GB upload)
     Returns list of split file paths
     """
-    max_size_bytes = max_size * 1024 * 1024  # Convert MB to bytes
-    file_size = os.path.getsize(file_path)
+    max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
+    file_size = os.path.getsize(video_path)
     
     if file_size <= max_size_bytes:
-        return [file_path]  # No split needed
+        return [video_path]  # No split needed
     
-    split_files = []
-    base_name = os.path.splitext(file_path)[0]
-    extension = os.path.splitext(file_path)[1]
+    parts_list = []
+    base_name = os.path.splitext(video_path)[0]
+    extension = os.path.splitext(video_path)[1]
     
     try:
         # Using ffmpeg to split video files
-        part_num = 1
-        segment_time = int((max_size_bytes / file_size) * get_video_duration(file_path))
+        segment_time = int((max_size_bytes / file_size) * get_video_duration(video_path))
         
         # Split using ffmpeg
         cmd = [
-            'ffmpeg', '-i', file_path,
+            'ffmpeg', '-i', video_path,
             '-c', 'copy',
             '-map', '0',
             '-segment_time', str(segment_time),
@@ -62,20 +61,20 @@ async def split_video_file(file_path, max_size=1900):
         subprocess.run(cmd, check=True, capture_output=True)
         
         # Collect split files
-        part_num = 1
+        part_number = 1
         while True:
-            part_file = f'{base_name}_part{str(part_num).zfill(3)}{extension}'
-            if os.path.exists(part_file):
-                split_files.append(part_file)
-                part_num += 1
+            part_path = f'{base_name}_part{str(part_number).zfill(3)}{extension}'
+            if os.path.exists(part_path):
+                parts_list.append(part_path)
+                part_number += 1
             else:
                 break
         
-        return split_files if split_files else [file_path]
+        return parts_list if parts_list else [video_path]
     
     except Exception as e:
         logging.error(f"Error splitting file: {e}")
-        return [file_path]  # Return original file if split fails
+        return [video_path]  # Return original file if split fails
 
 def get_video_duration(file_path):
     """Get video duration in seconds using ffprobe"""
@@ -277,15 +276,15 @@ async def account_login(bot: Client, m: Message):
                             file_size_mb = os.path.getsize(video_file) / (1024 * 1024)
                             if file_size_mb > 1900:
                                 split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
-                                split_files = await split_video_file(video_file)
+                                video_parts = await split_large_video(video_file)
                                 await split_prog.delete(True)
                                 
-                                if split_files and len(split_files) > 1:
-                                    for idx, split_f in enumerate(split_files, 1):
-                                        part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
-                                        await helper.send_vid(bot, m, part_cc, split_f, thumb, os.path.basename(split_f), prog, url, channel_id)
-                                        if os.path.exists(split_f):
-                                            os.remove(split_f)
+                                if video_parts and len(video_parts) > 1:
+                                    for part_idx, part_path in enumerate(video_parts, 1):
+                                        part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                        await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
+                                        if os.path.exists(part_path):
+                                            os.remove(part_path)
                                 else:
                                     # If split failed, send original file
                                     await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
@@ -301,29 +300,40 @@ async def account_login(bot: Client, m: Message):
                     time.sleep(3)
                 else:
                     mpd = None
-                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}\n🎥Video Quality - {raw_text2}\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
+                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
                     prog = await bot.send_message(channel_id, Show)
                     res_file = await helper.download_video(url, cmd, name)
                     filename = res_file
                     await prog.delete(True)
                     
                     # Check file size and split if needed
-                    if os.path.exists(filename):
-                        file_size_mb = os.path.getsize(filename) / (1024 * 1024)
-                        if file_size_mb > 1900:
-                            split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
-                            split_files = await split_file(filename)
-                            await split_prog.delete(True)
-                            
-                            for idx, split_file in enumerate(split_files, 1):
-                                part_cc = f'🎬 **Video Name:** {name1}\n📦 **Batch Name:** {b_name}\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
-                                await helper.send_vid(bot, m, part_cc, split_file, thumb, os.path.basename(split_file), prog, url, channel_id)
-                                os.remove(split_file)
-                            
-                            if os.path.exists(filename):
-                                os.remove(filename)
-                        else:
+                    if filename and os.path.exists(filename):
+                        try:
+                            file_size_mb = os.path.getsize(filename) / (1024 * 1024)
+                            if file_size_mb > 1900:
+                                split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
+                                video_parts = await split_large_video(filename)
+                                await split_prog.delete(True)
+                                
+                                if video_parts and len(video_parts) > 1:
+                                    for part_idx, part_path in enumerate(video_parts, 1):
+                                        part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                        await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
+                                        if os.path.exists(part_path):
+                                            os.remove(part_path)
+                                    
+                                    if os.path.exists(filename):
+                                        os.remove(filename)
+                                else:
+                                    # If split failed, send original file
+                                    await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
+                            else:
+                                await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
+                        except Exception as e:
+                            logging.error(f"Error processing file: {e}")
                             await helper.send_vid(bot, m, cc, filename, thumb, name, prog, url, channel_id)
+                    else:
+                        raise Exception("Download failed - file not found")
                     
                     count += 1
                     time.sleep(1)
