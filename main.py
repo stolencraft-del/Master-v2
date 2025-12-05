@@ -52,52 +52,70 @@ async def split_large_video(video_path, max_size_mb=1900):
         
         # Get video duration
         duration = get_video_duration(video_path)
-        logging.info(f"Video duration: {duration} seconds")
+        logging.info(f"Video duration: {duration} seconds, File size: {file_size / (1024*1024):.2f} MB")
         
-        # Calculate segment time to keep parts under max_size_mb
-        segment_time = int((max_size_bytes / file_size) * duration * 0.95)  # 95% safety margin
+        # Calculate how many parts we need
+        num_parts = int((file_size / max_size_bytes) + 1)
+        segment_time = int(duration / num_parts)
         
-        logging.info(f"Splitting {video_path} into segments of {segment_time} seconds")
+        logging.info(f"Will split into approximately {num_parts} parts, {segment_time} seconds each")
         
-        # Split using ffmpeg
+        # Output pattern for split files
+        output_pattern = f'{base_name}_part%03d{extension}'
+        
+        # Split using ffmpeg with proper segment format
         cmd = [
             'ffmpeg', '-i', video_path,
             '-c', 'copy',
             '-map', '0',
-            '-segment_time', str(segment_time),
             '-f', 'segment',
+            '-segment_time', str(segment_time),
             '-reset_timestamps', '1',
-            f'{base_name}_part%03d{extension}'
+            '-avoid_negative_ts', '1',
+            output_pattern
         ]
         
+        logging.info(f"Running FFmpeg split command: {' '.join(cmd)}")
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
-            logging.error(f"FFmpeg error: {result.stderr}")
+            logging.error(f"FFmpeg split failed with return code {result.returncode}")
+            logging.error(f"FFmpeg stderr: {result.stderr[:500]}")
             return [video_path]
+        
+        logging.info("FFmpeg split completed, collecting parts...")
         
         # Collect split files
         part_number = 1
         while True:
-            part_path = f'{base_name}_part{str(part_number).zfill(3)}{extension}'
+            part_path = f'{base_name}_part{str(part_number-1).zfill(3)}{extension}'
             if os.path.exists(part_path):
                 part_size = os.path.getsize(part_path) / (1024 * 1024)
-                logging.info(f"Created part {part_number}: {part_path} ({part_size:.2f} MB)")
+                logging.info(f"Found part {part_number}: {part_path} ({part_size:.2f} MB)")
                 parts_list.append(part_path)
                 part_number += 1
             else:
                 break
         
         if not parts_list:
-            logging.error("No parts created, returning original file")
+            logging.error("No parts created by FFmpeg, returning original file")
+            return [video_path]
+        
+        if len(parts_list) < 2:
+            logging.warning(f"Only 1 part created, expected multiple parts")
+            # Clean up the single part and return original
+            if os.path.exists(parts_list[0]):
+                os.remove(parts_list[0])
             return [video_path]
             
-        logging.info(f"Successfully split into {len(parts_list)} parts")
+        logging.info(f"Successfully created {len(parts_list)} parts")
         return parts_list
     
     except Exception as e:
-        logging.error(f"Error splitting file: {e}")
-        return [video_path]  # Return original file if split fails
+        logging.error(f"Exception in split_large_video: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return [video_path]
 
 def get_video_duration(file_path):
     """Get video duration in seconds using ffprobe"""
