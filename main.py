@@ -28,7 +28,7 @@ logging.basicConfig(
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 # Split file function
-async def split_file(file_path, max_size=1900):
+async def split_video_file(file_path, max_size=1900):
     """
     Split file into chunks of max_size MB (default 1.9 GB for safe 2GB upload)
     Returns list of split file paths
@@ -277,7 +277,7 @@ async def account_login(bot: Client, m: Message):
                             file_size_mb = os.path.getsize(video_file) / (1024 * 1024)
                             if file_size_mb > 1900:
                                 split_prog = await bot.send_message(channel_id, f"**📦 File size: {file_size_mb:.2f} MB\n\n🔪 Splitting file...**")
-                                split_files = await split_file(video_file)
+                                split_files = await split_video_file(video_file)
                                 await split_prog.delete(True)
                                 
                                 if split_files and len(split_files) > 1:
