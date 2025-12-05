@@ -240,8 +240,11 @@ async def account_login(bot: Client, m: Message):
                 ytf = f"b[height<={raw_text2}][ext=mp4]/bv[height<={raw_text2}][ext=mp4]+ba[ext=m4a]/b[ext=mp4]"
             else:
                 ytf = f"b[height<={raw_text2}]/bv[height<={raw_text2}]+ba/b/bv+ba"
+            
             if "jw-prod" in url:
                 cmd = f'yt-dlp -o "{name}.mp4" "{url}"'
+            elif "zoom.us" in url:
+                cmd = f'yt-dlp --no-check-certificate -o "{name}.mp4" "{url}"'
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'    
             try:
@@ -276,10 +279,15 @@ async def account_login(bot: Client, m: Message):
                             split_files = await split_file(video_file)
                             await split_prog.delete(True)
                             
-                            for idx, split_file in enumerate(split_files, 1):
-                                part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
-                                await helper.send_vid(bot, m, part_cc, split_file, thumb, os.path.basename(split_file), prog, url, channel_id)
-                                os.remove(split_file)
+                            if split_files and len(split_files) > 1:
+                                for idx, split_f in enumerate(split_files, 1):
+                                    part_cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {idx}/{len(split_files)}**'
+                                    await helper.send_vid(bot, m, part_cc, split_f, thumb, os.path.basename(split_f), prog, url, channel_id)
+                                    if os.path.exists(split_f):
+                                        os.remove(split_f)
+                            else:
+                                # If split failed, send original file
+                                await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
                         else:
                             await helper.merge_and_send_vid(bot, m, cc, name, prog, path, url, thumb, channel_id)
                     
