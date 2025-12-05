@@ -206,12 +206,12 @@ async def account_login(bot: Client, m: Message):
         await input2.delete(True)
 
 
-        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀᴅ Bʏ : `『ᎷΔŞŦᏋᏒ』❤️`")
+        await editable.edit("**Enter Your Channel Name or Owner Name**\n\nEg : Dᴏᴡɴʟᴏᴀᴅ Bʏ : `𝗧𝗘𝗔𝗠 𝗦𝗣𝗬`")
         input3: Message = await bot.listen(editable.chat.id)
         raw_text3 = input3.text
         await input3.delete(True)
         if raw_text3 == 'de':
-            MR = "『ᎷΔŞŦᏋᏒ』❤️"
+            MR = "𝗧𝗘𝗔𝗠 𝗦𝗣𝗬"
         else:               
             MR = raw_text3
     
@@ -288,8 +288,9 @@ async def account_login(bot: Client, m: Message):
             else:
                 cmd = f'yt-dlp -f "{ytf}" "{url}" -o "{name}.mp4"'    
             try:
-                cc = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'
-                cc1 = f'📕 **PDF Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'                   
+                # Updated caption format with index number
+                cc = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'
+                cc1 = f'📕 **PDF Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}'                   
 
                 if "drive" in url or ".pdf" in url or "pdfs" in url:
                     try:
@@ -305,7 +306,7 @@ async def account_login(bot: Client, m: Message):
                         continue
 
                 elif mpd and keys:
-                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Url -** `{url}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
+                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Url -** `{url}`\n🎥**Video Quality - {raw_text2}**\n\n 𝗧𝗘𝗔𝗠 𝗦𝗣𝗬 @kingofpaatal"
                     prog = await bot.send_message(channel_id, Show)
                     await helper.download_and_dec_video(mpd, keys, path, name, raw_text2)
                     await prog.delete(True)
@@ -327,7 +328,7 @@ async def account_login(bot: Client, m: Message):
                                     for part_idx, part_path in enumerate(video_parts, 1):
                                         part_size = os.path.getsize(part_path) / (1024 * 1024)
                                         logging.info(f"Uploading part {part_idx}: {part_size:.2f} MB")
-                                        part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                        part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
                                         await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
                                         if os.path.exists(part_path):
                                             os.remove(part_path)
@@ -350,7 +351,7 @@ async def account_login(bot: Client, m: Message):
                     time.sleep(3)
                 else:
                     mpd = None
-                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By  🌟『@NtrRazYt』 🌟"
+                    Show = f"**🤖 𝖣𝗈𝗐𝗇𝗅𝗈𝖺𝖽𝗂𝗇𝗀 𝖡𝗈𝗌𝗌 🤖:-**\n\n**Name :-** `{name}`\n🎥**Video Quality - {raw_text2}**\n\n Bot Made By 𝗧𝗘𝗔𝗠 𝗦𝗣𝗬 @kingofpaatal"
                     prog = await bot.send_message(channel_id, Show)
                     
                     # Download the video
@@ -390,7 +391,7 @@ async def account_login(bot: Client, m: Message):
                                 part_size = os.path.getsize(part_path) / (1024 * 1024)
                                 logging.info(f"[SPLIT CHECK] Uploading part {part_idx}/{len(video_parts)}: {part_path} ({part_size:.2f} MB)")
                                 
-                                part_caption = f'🎬 **Video Name:** {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
                                 
                                 await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
                                 
