@@ -30,7 +30,7 @@ logging.getLogger("pyrogram").setLevel(logging.WARNING)
 # Split video file function
 async def split_large_video(video_path, max_size_mb=1900):
     """
-    Split file into chunks of max_size_mb (default 1.9 GB for safe 2GB upload)
+    Split file into 1.9GB chunks for safe Telegram upload
     Returns list of split file paths
     """
     try:
@@ -54,11 +54,14 @@ async def split_large_video(video_path, max_size_mb=1900):
         duration = get_video_duration(video_path)
         logging.info(f"Video duration: {duration} seconds, File size: {file_size / (1024*1024):.2f} MB")
         
-        # Calculate how many parts we need
-        num_parts = int((file_size / max_size_bytes) + 1)
+        # Calculate how many parts we need (1.9GB each)
+        num_parts = int((file_size / max_size_bytes) + 0.5)  # Round up properly
+        if num_parts < 2:
+            num_parts = 2
+        
         segment_time = int(duration / num_parts)
         
-        logging.info(f"Will split into approximately {num_parts} parts, {segment_time} seconds each")
+        logging.info(f"Splitting into {num_parts} parts of ~1.9GB each, ~{segment_time} seconds per part")
         
         # Output pattern for split files
         output_pattern = f'{base_name}_part%03d{extension}'
@@ -75,7 +78,7 @@ async def split_large_video(video_path, max_size_mb=1900):
             output_pattern
         ]
         
-        logging.info(f"Running FFmpeg split command: {' '.join(cmd)}")
+        logging.info(f"Running FFmpeg split command...")
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
@@ -86,12 +89,12 @@ async def split_large_video(video_path, max_size_mb=1900):
         logging.info("FFmpeg split completed, collecting parts...")
         
         # Collect split files
-        part_number = 1
+        part_number = 0
         while True:
-            part_path = f'{base_name}_part{str(part_number-1).zfill(3)}{extension}'
+            part_path = f'{base_name}_part{str(part_number).zfill(3)}{extension}'
             if os.path.exists(part_path):
-                part_size = os.path.getsize(part_path) / (1024 * 1024)
-                logging.info(f"Found part {part_number}: {part_path} ({part_size:.2f} MB)")
+                part_size = os.path.getsize(part_path) / (1024 * 1024 * 1024)  # Convert to GB
+                logging.info(f"Found part {part_number + 1}: {part_path} ({part_size:.2f} GB)")
                 parts_list.append(part_path)
                 part_number += 1
             else:
@@ -102,13 +105,13 @@ async def split_large_video(video_path, max_size_mb=1900):
             return [video_path]
         
         if len(parts_list) < 2:
-            logging.warning(f"Only 1 part created, expected multiple parts")
+            logging.warning(f"Only 1 part created, file may be smaller than expected")
             # Clean up the single part and return original
             if os.path.exists(parts_list[0]):
                 os.remove(parts_list[0])
             return [video_path]
             
-        logging.info(f"Successfully created {len(parts_list)} parts")
+        logging.info(f"Successfully created {len(parts_list)} parts of 1.9GB each")
         return parts_list
     
     except Exception as e:
@@ -328,7 +331,7 @@ async def account_login(bot: Client, m: Message):
                                     for part_idx, part_path in enumerate(video_parts, 1):
                                         part_size = os.path.getsize(part_path) / (1024 * 1024)
                                         logging.info(f"Uploading part {part_idx}: {part_size:.2f} MB")
-                                        part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                        part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n**Part {part_idx}/{len(video_parts)}**'
                                         await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
                                         if os.path.exists(part_path):
                                             os.remove(part_path)
@@ -391,7 +394,7 @@ async def account_login(bot: Client, m: Message):
                                 part_size = os.path.getsize(part_path) / (1024 * 1024)
                                 logging.info(f"[SPLIT CHECK] Uploading part {part_idx}/{len(video_parts)}: {part_path} ({part_size:.2f} MB)")
                                 
-                                part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n📦 **Part {part_idx}/{len(video_parts)}**'
+                                part_caption = f'🎬 **Video Name:** {str(count).zfill(3)}. {name1}\n\n📦 **Batch Name:** {b_name}\n\n👤 **Downloaded By:** {MR}\n\n**Part {part_idx}/{len(video_parts)}**'
                                 
                                 await helper.send_vid(bot, m, part_caption, part_path, thumb, os.path.basename(part_path), prog, url, channel_id)
                                 
